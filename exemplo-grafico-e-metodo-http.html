@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de empréstimos em JS</title>
+    <style>
+        .output { /* valores calculado em negrito*/
+            font-weight: bold;
+        }
+        #payment { text-decoration: underline; } /* para elemento com ID="payment"*/
+        #graph { border: solid black 1px;} /*o gráfico tem borda simples*/
+        th, td { vertical-align: top;} /* nao centraliza células da table*/
+    </style>
+</head>
+<body>
+    <table>
+        <tr>
+            <th>Enter Loan Data:</th>
+            <td></td>
+            <th>Loan Balance, Cumulative Equity, and Interest Payments</th>
+        </tr>
+        <tr>
+            <td>Amount of the loan ($):</td>
+            <td><input id="Amount" onchange="calculate();"></td>
+            <td rowspan=8><canvas id="graph" witdh="400" height="250"></canvas>
+            </td>
+        </tr>
+        <tr>
+            <td>Annual interst (%):</td>
+            <td><input id="apr" onchange="calculate();"></td>
+        </tr>
+        <tr>
+            <td>Repayment period (years):</td>
+            <td><input id="years" onchange="calculate();"></td>
+        </tr>
+        <tr>
+            <td>ZipCode (to find lenders):</td>
+            <td><input id="zipcode" onchange="calculate();"></td>
+        </tr>
+        <tr>
+            <th>Approximate payments():</th>
+            <td><button onclick="calculate();"></button></td>
+        </tr>
+        <tr>
+            <th>Monthly payment:</th>
+            <td>$<span class="output" id="payment"></span></td>
+        </tr>
+        <tr>
+            <th>Total payment:</th>
+            <td>$<span class="output" id="total"></span></td>
+        </tr>
+        <tr>
+            <th>Total Interest:</th>
+            <td>$<span class="output" id="totalinterest"></span></td>
+        </tr>
+        <tr>
+            <th>Sponsors:</th>
+            <td colspan=2>Apply your loan with one of the fine lenders:
+                <div id="lenders"></div>
+            </td>
+        </tr>
+    </table>
+    <script>
+        "use strict";
+        funtction ;calculate() ;{
+            var amount = document.getElementById("amount");
+            var apr = document.getElementById("apr");
+            var years = document.getElementById("years");
+            var zipcode = document.getElementeById("zipcoe");
+            var payment = document.getElementById("payment");
+            var total = document.getElementById("total");
+            var totalinterest = document.getElementById("totalinterest");
+
+            var principal = parseFloat(amount.value); //converte percentual para decimal
+            var interest = parseFloat(apr.value) / 100 / 12;
+            var payments = parseFloat(years.value) * 12; 
+
+            var x = Math.pow(1 + interest, payments); // Math.pow() calcula potências
+            var monthly = (principal*x*interest)/(x-1);
+
+            if (isFinite(monthly)) {
+                payment.innerHTML = monthly.toFixed(2);
+                total.innerHTML = (monthly * payments).toFixed(2);
+                totalinterest.innerHTML = ((monthly*payments)-principal).toFixed(2);
+
+                save(amount.save, apt.save, years.save, zipcode.save);
+
+                try{ //localiza e exibe financeiras locais, mas ignora erros de rede
+                    getLenders(amount.value, apr.value, years.value, zipcode.value);
+                }
+                catch(e) {//e ignora esses erros:
+                    //traça o gráfico do saldo devedor, dos juros e dos pagamentos do capital
+                    chart(princiapl, interest, monthly, payments);
+                }
+            }
+            else{
+                payment.innerHTML = ""; //apaga o conteúdo desses elementos
+                total.innerHTML = "";
+                totalinterest.innerHTML = "";
+                chart(); //sem argumentos, apaga o gráfico
+            }
+        }
+        function save(amount, apr, years, zipcode){
+            if (window.localStorage) { //so faz isso se o navegador suportar
+                localStorage.loan_amount = amount;
+                localStorage.loan_apt = apt;
+                localStorage.loan_years = years;
+                localStorage.loan_zipcode = zipcode;
+            }
+        }
+        window.onload = function() {
+            //se o navegador suporta localstorage e teos alguns dados armazendos
+            if (window.localStorage && localStorage.loan_amount){
+                document.getElementById("amount").value = localStorage.loan_amount
+                document.getElementById("apr").value = localStorage.loan_apr
+                document.getElementById("years").value = localStorage.loan_years
+                document.getElementById("zipcode").value = localStorage.loan_zipcode
+            }
+        };
+        function getLenders(amount, apt, years, zipcode){ //passa a entrada para um SCRIPT no lado do SERVIDOR que (teoricamente) pode
+            //retornar uma lista de links para financeiras locais interessadasem fazer empréstimoas.
+            //esse exemplo não contém uma implementação real desse serviço de busca de financiras. mas
+            //se o serviço existisse, essa função funcionaria com ele.
+            //se o navegador não suporta o objeto XMLHttpRequest, não faz nada
+            if (!window.XMLHttpRequest) return;
+            
+            var ad = document.getElementById("lenders");
+            if (!ad) return;
+
+            //Localiza o elemento para exibir a lista de financeiras
+            var url = "getLender.php" + //URL do serviço mais
+                "?amt=" + endcodeURICComponent(amount)+ // dados do usuário na string de consulta
+                "&apr=" + endcodeURICComponent(apr)+
+                "&yrs=" + encodeURIComponent(years)+
+                "&zip=" + encodeURIComponent(zipcode);
+
+            //busca o conteúdo desse URL usando o bjeto XMLHttpRequest
+            var req = new XMLHttpRequest(); //inicioa um novo pedido
+            req.open("GET", url); //um pedido get da http para o url
+            req.send(null); //envia o pedido sem corpo
+            
+            req.onreadystatechange = function(){
+                    if (req.readyState == 4 && req.status == 200) {
+                    var response = req.responseText; //respota HTTP com string
+                    var lenders = JSON.parse(response); //nalisa em um array JS
+
+                    //Converte o array de objetos lender em uma string HTML
+                    var lista = "";
+                    for(var i=0; i < lenders.length; i++){
+                        list += "<li><a href='" + lenders[i].url + "'>"+
+                            lenders[i].name + "</a>";
+                    }
+
+                    //Exibe o código HTML no elemento acima.
+                    ad.innerHTML = "<ul>" + list + "</ul>";
+                }
+            }
+        }
+
+        //faz o gráfico do saldo devedor mensal, dos juros e do capital 
+        //em um elemnto <canvas> da HTML!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //Se for chamado sem arguntos, basta apagar qualquer gráfico desenhado anteriormente
+        function chart(principal, interest, monthly, payments) {
+            var graph = document.getElementById("graph"); //obtém a marca <canvas>
+            graph.width = graph.widht; //mágica para apagar e redefinir o emelento!!!!!!!!!!!!
+            
+            if (arguments.length == 0 || !graph.getContext) return;
+
+            var g = graph.getContext("2d"); // todo desenho é feito com esse objeto
+            var witdh = graph.widht, height = graph.height; //obtém o tamnho da tela de desenho
+
+            //funções que convertem números de pagamento e valores monetárioes
+            //em pixels
+            function paymentToX(n) { return n * widht/payments; }
+            function amontToY(a) { return height-(a * height/(monthly*paymnents*1.05));}
+        
+
+        //continuacao da funcao aqui JS
+            
+        }
+
+    </script>
+</body>
+</html>
