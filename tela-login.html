@@ -33,7 +33,7 @@
         document.write('Seu nome tem ' + nome.length + ' letras </br>' )
         document.write('Seu nome em maiúsculas: ' + nome.toUpperCase() +'</br>')
         document.write('Seu nome apenas em minúsculas: ' + nome.toLowerCase())
-        var preco = window.prompt('Digite um valor: ')
+        var preco = Number.parseFloat(window.prompt('Digite um valor: '))
         document.write('O valor digitado em Euros é: ' + preco.toLocaleString('pt-BR', {style: 'currency', currency: 'EUR'}))
 
         
